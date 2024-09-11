@@ -2,7 +2,7 @@
     "build": {
         "dockerfile": "Dockerfile" 
     },
-    "runArgs": ["-h", "compeng.gg"],
+    "runArgs": ["-h", "ece454"],
     "customizations": {
         "vscode": {
             "settings": {
