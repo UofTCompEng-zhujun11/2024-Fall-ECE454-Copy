@@ -271,10 +271,10 @@ void processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned heigh
  **********************************************************************************************************************/
 void processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
                                int rotate_iteration) {
-
     rotate_iteration = rotate_iteration % 4;
     if (!rotate_iteration)
         return;
+
     // handle negative offsets
     if (rotate_iteration < 0){
         return processRotateCCW(buffer_frame, width, height, rotate_iteration * -1);
@@ -334,6 +334,7 @@ void processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned heig
     rotate_iteration = rotate_iteration % 4;
     if (!rotate_iteration)
         return;
+
     if (rotate_iteration < 0){
         // handle negative offsets
         // rotating 90 degrees counter clockwise in opposite direction is equal to 90 degrees in cw direction
