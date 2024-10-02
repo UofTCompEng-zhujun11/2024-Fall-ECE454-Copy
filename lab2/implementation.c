@@ -17,7 +17,7 @@ void processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned heig
 // Variable Declarations
 unsigned char *rendered_frame_one;
 unsigned char *rendered_frame_two;
-bool scr_one = true;
+bool scr_one;
 
 /***********************************************************************************************************************
  * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
@@ -271,6 +271,10 @@ void processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned heigh
  **********************************************************************************************************************/
 void processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
                                int rotate_iteration) {
+
+    rotate_iteration = rotate_iteration % 4;
+    if (!rotate_iteration)
+        return;
     // handle negative offsets
     if (rotate_iteration < 0){
         return processRotateCCW(buffer_frame, width, height, rotate_iteration * -1);
@@ -327,6 +331,9 @@ void processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned heigh
  **********************************************************************************************************************/
 void processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned height,
                                 int rotate_iteration) {
+    rotate_iteration = rotate_iteration % 4;
+    if (!rotate_iteration)
+        return;
     if (rotate_iteration < 0){
         // handle negative offsets
         // rotating 90 degrees counter clockwise in opposite direction is equal to 90 degrees in cw direction
@@ -473,6 +480,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     rendered_frame_one = allocateFrame(width, height);
     rendered_frame_two = allocateFrame(width, height);
     rendered_frame_one = copyFrame(frame_buffer, rendered_frame_one, width, height);
+    scr_one = true;
     for (int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; sensorValueIdx++) {
 //        printf("Processing sensor value #%d: %s, %d\n", sensorValueIdx, sensor_values[sensorValueIdx].key,
 //               sensor_values[sensorValueIdx].value);
