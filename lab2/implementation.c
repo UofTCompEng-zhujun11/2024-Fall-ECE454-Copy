@@ -4,6 +4,17 @@
 #include "utilities.h"  // DO NOT REMOVE this line
 #include "implementation_reference.h"   // DO NOT REMOVE this line
 
+// Declariations
+unsigned char *processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
+unsigned char *processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
+unsigned char *processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
+unsigned char *processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
+unsigned char *processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
+                                        int rotate_iteration);
+unsigned char *processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned height,
+                                        int rotate_iteration);
+
+
 /***********************************************************************************************************************
  * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
  * @param width - width of the imported 24-bit bitmap image
@@ -16,7 +27,7 @@
 unsigned char *processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveDownReference(buffer_frame, width, height, offset * -1);
+        return processMoveDown(buffer_frame, width, height, offset * -1);
     }
 
     // allocate memory for temporary image buffer
@@ -65,7 +76,7 @@ unsigned char *processMoveUp(unsigned char *buffer_frame, unsigned width, unsign
 unsigned char *processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveLeftReference(buffer_frame, width, height, offset * -1);
+        return processMoveLeft(buffer_frame, width, height, offset * -1);
     }
 
     // allocate memory for temporary image buffer
@@ -114,7 +125,7 @@ unsigned char *processMoveRight(unsigned char *buffer_frame, unsigned width, uns
 unsigned char *processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveUpReference(buffer_frame, width, height, offset * -1);
+        return processMoveUp(buffer_frame, width, height, offset * -1);
     }
 
     // allocate memory for temporary image buffer
@@ -163,7 +174,7 @@ unsigned char *processMoveDown(unsigned char *buffer_frame, unsigned width, unsi
 unsigned char *processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveRightReference(buffer_frame, width, height, offset * -1);
+        return processMoveRight(buffer_frame, width, height, offset * -1);
     }
 
     // allocate memory for temporary image buffer
@@ -212,7 +223,7 @@ unsigned char *processRotateCW(unsigned char *buffer_frame, unsigned width, unsi
                                int rotate_iteration) {
     // handle negative offsets
     if (rotate_iteration < 0){
-        return processRotateCCWReference(buffer_frame, width, height, rotate_iteration * -1);
+        return processRotateCCW(buffer_frame, width, height, rotate_iteration * -1);
     }
 
     // allocate memory for temporary image buffer
@@ -259,12 +270,12 @@ unsigned char *processRotateCCW(unsigned char *buffer_frame, unsigned width, uns
         // handle negative offsets
         // rotating 90 degrees counter clockwise in opposite direction is equal to 90 degrees in cw direction
         for (int iteration = 0; iteration > rotate_iteration; iteration--) {
-            buffer_frame = processRotateCWReference(buffer_frame, width, height, 1);
+            buffer_frame = processRotateCW(buffer_frame, width, height, 1);
         }
     } else {
         // rotating 90 degrees counter clockwise is equivalent of rotating 270 degrees clockwise
         for (int iteration = 0; iteration < rotate_iteration; iteration++) {
-            buffer_frame = processRotateCWReference(buffer_frame, width, height, 3);
+            buffer_frame = processRotateCW(buffer_frame, width, height, 3);
         }
     }
 
