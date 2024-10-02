@@ -6,14 +6,12 @@
 #include "implementation_reference.h"   // DO NOT REMOVE this line
 
 // Declariations
-void processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
-void processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
-void processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
-void processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned height, int offset);
-void processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                         int rotate_iteration);
-void processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                                        int rotate_iteration);
+void processMoveUp(unsigned width, unsigned height, int offset);
+void processMoveLeft(unsigned width, unsigned height, int offset);
+void processMoveDown(unsigned width, unsigned height, int offset);
+void processMoveRight(unsigned width, unsigned height, int offset);
+void processRotateCW(unsigned width, unsigned height, int rotate_iteration, bool is_CCW);
+
 // Variable Declarations
 unsigned char *rendered_frame_one;
 unsigned char *rendered_frame_two;
@@ -28,14 +26,12 @@ bool scr_one;
  * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
  * Note2: You can assume the object will never be moved off the screen
  **********************************************************************************************************************/
-void processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
+void processMoveUp(unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveDown(buffer_frame, width, height, offset * -1);
+        return processMoveDown(width, height, offset * -1);
     }
 
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
     unsigned char * scr_frame;
     unsigned char * dest_frame;
     if (scr_one){
@@ -69,13 +65,6 @@ void processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height,
         }
     }
 
-    // copy the temporary buffer back to original frame buffer
-    // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
-
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -88,10 +77,10 @@ void processMoveUp(unsigned char *buffer_frame, unsigned width, unsigned height,
  * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
  * Note2: You can assume the object will never be moved off the screen
  **********************************************************************************************************************/
-void processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
+void processMoveRight(unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveLeft(buffer_frame, width, height, offset * -1);
+        return processMoveLeft(width, height, offset * -1);
     }
     unsigned char * scr_frame;
     unsigned char * dest_frame;
@@ -104,10 +93,6 @@ void processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned heig
         dest_frame = rendered_frame_one;
         scr_one = true;
     }
-
-
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
 
     // store shifted pixels to temporary buffer
     for (int row = 0; row < height; row++) {
@@ -130,13 +115,6 @@ void processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned heig
         }
     }
 
-    // copy the temporary buffer back to original frame buffer
-    // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
-
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -149,10 +127,10 @@ void processMoveRight(unsigned char *buffer_frame, unsigned width, unsigned heig
  * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
  * Note2: You can assume the object will never be moved off the screen
  **********************************************************************************************************************/
-void processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
+void processMoveDown(unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveUp(buffer_frame, width, height, offset * -1);
+        return processMoveUp(width, height, offset * -1);
     }
     unsigned char * scr_frame;
     unsigned char * dest_frame;
@@ -165,9 +143,6 @@ void processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned heigh
         dest_frame = rendered_frame_one;
         scr_one = true;
     }
-
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
 
     // store shifted pixels to temporary buffer
     for (int row = offset; row < height; row++) {
@@ -190,13 +165,6 @@ void processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned heigh
         }
     }
 
-    // copy the temporary buffer back to original frame buffer
-    // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
-
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -209,14 +177,12 @@ void processMoveDown(unsigned char *buffer_frame, unsigned width, unsigned heigh
  * Note1: White pixels RGB(255,255,255) are treated as background. Object in the image refers to non-white pixels.
  * Note2: You can assume the object will never be moved off the screen
  **********************************************************************************************************************/
-void processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned height, int offset) {
+void processMoveLeft(unsigned width, unsigned height, int offset) {
     // handle negative offsets
     if (offset < 0){
-        return processMoveRight(buffer_frame, width, height, offset * -1);
+        return processMoveRight(width, height, offset * -1);
     }
 
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
     unsigned char * scr_frame;
     unsigned char * dest_frame;
     if (scr_one){
@@ -251,13 +217,6 @@ void processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned heigh
         }
     }
 
-    // copy the temporary buffer back to original frame buffer
-    // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
-
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -269,22 +228,46 @@ void processMoveLeft(unsigned char *buffer_frame, unsigned width, unsigned heigh
  * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
  * Note: You can assume the frame will always be square and you will be rotating the entire image
  **********************************************************************************************************************/
-void processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                               int rotate_iteration) {
+void processRotateCW(unsigned width, unsigned height, int rotate_iteration, bool is_CCW) {
+
     rotate_iteration = rotate_iteration % 4;
     if (!rotate_iteration)
         return;
 
-    // handle negative offsets
-    if (rotate_iteration < 0){
-        return processRotateCCW(buffer_frame, width, height, rotate_iteration * -1);
-    }
-
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
-
     unsigned char * scr_frame;
     unsigned char * dest_frame;
+
+    if (is_CCW){
+        switch (rotate_iteration) {
+            case 1:
+            case -3:
+                rotate_iteration = 3;
+                break;
+            case 2:
+            case -2:
+                rotate_iteration = 2;
+                break;
+            case 3:
+            case -1:
+                rotate_iteration = 1;
+                break;
+        }
+    } else {
+        switch (rotate_iteration) {
+            case 1:
+            case -3:
+                rotate_iteration = 1;
+                break;
+            case 2:
+            case -2:
+                rotate_iteration = 2;
+                break;
+            case 3:
+            case -1:
+                rotate_iteration = 3;
+                break;
+        }
+    }
 
     // store shifted pixels to temporary buffer
     for (int iteration = 0; iteration < rotate_iteration; iteration++) {
@@ -310,45 +293,8 @@ void processRotateCW(unsigned char *buffer_frame, unsigned width, unsigned heigh
             render_row = 0;
             render_column -= 1;
         }
-        // copy the temporary buffer back to original frame buffer
-        // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
     }
 
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
-    return;
-}
-
-/***********************************************************************************************************************
- * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
- * @param width - width of the imported 24-bit bitmap image
- * @param height - height of the imported 24-bit bitmap image
- * @param rotate_iteration - rotate object inside frame buffer counter clockwise by 90 degrees, <iteration> times
- * @return - pointer pointing a buffer storing a modified 24-bit bitmap image
- * Note: You can assume the frame will always be square and you will be rotating the entire image
- **********************************************************************************************************************/
-void processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned height,
-                                int rotate_iteration) {
-    rotate_iteration = rotate_iteration % 4;
-    if (!rotate_iteration)
-        return;
-
-    if (rotate_iteration < 0){
-        // handle negative offsets
-        // rotating 90 degrees counter clockwise in opposite direction is equal to 90 degrees in cw direction
-        for (int iteration = 0; iteration > rotate_iteration; iteration--) {
-            processRotateCW(buffer_frame, width, height, 1);
-        }
-    } else {
-        // rotating 90 degrees counter clockwise is equivalent of rotating 270 degrees clockwise
-        for (int iteration = 0; iteration < rotate_iteration; iteration++) {
-            processRotateCW(buffer_frame, width, height, 3);
-        }
-    }
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -359,9 +305,7 @@ void processRotateCCW(unsigned char *buffer_frame, unsigned width, unsigned heig
  * @param _unused - this field is unused
  * @return
  **********************************************************************************************************************/
-void processMirrorX(unsigned char *buffer_frame, unsigned int width, unsigned int height, int _unused) {
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
+void processMirrorX(unsigned int width, unsigned int height, int _unused) {
 
     unsigned char * scr_frame;
     unsigned char * dest_frame;
@@ -386,13 +330,6 @@ void processMirrorX(unsigned char *buffer_frame, unsigned int width, unsigned in
         }
     }
 
-    // copy the temporary buffer back to original frame buffer
-    // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
-
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -403,9 +340,7 @@ void processMirrorX(unsigned char *buffer_frame, unsigned int width, unsigned in
  * @param _unused - this field is unused
  * @return
  **********************************************************************************************************************/
-void processMirrorY(unsigned char *buffer_frame, unsigned width, unsigned height, int _unused) {
-    // allocate memory for temporary image buffer
-    // unsigned char *rendered_frame = allocateFrame(width, height);
+void processMirrorY(unsigned width, unsigned height, int _unused) {
 
     unsigned char * scr_frame;
     unsigned char * dest_frame;
@@ -430,13 +365,6 @@ void processMirrorY(unsigned char *buffer_frame, unsigned width, unsigned height
         }
     }
 
-    // copy the temporary buffer back to original frame buffer
-    // buffer_frame = copyFrame(rendered_frame, buffer_frame, width, height);
-
-    // free temporary image buffer
-    // deallocateFrame(rendered_frame);
-
-    // return a pointer to the updated image buffer
     return;
 }
 
@@ -480,42 +408,42 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int processed_frames = 0;
     rendered_frame_one = allocateFrame(width, height);
     rendered_frame_two = allocateFrame(width, height);
-    rendered_frame_one = copyFrame(frame_buffer, rendered_frame_one, width, height);
+    memcpy(rendered_frame_one, frame_buffer, (width * height * 3) * sizeof(char));
     scr_one = true;
     for (int sensorValueIdx = 0; sensorValueIdx < sensor_values_count; sensorValueIdx++) {
 //        printf("Processing sensor value #%d: %s, %d\n", sensorValueIdx, sensor_values[sensorValueIdx].key,
 //               sensor_values[sensorValueIdx].value);
         if (!strcmp(sensor_values[sensorValueIdx].key, "W")) {
-            processMoveUp(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processMoveUp(width, height, sensor_values[sensorValueIdx].value);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "A")) {
-            processMoveLeft(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processMoveLeft(width, height, sensor_values[sensorValueIdx].value);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "S")) {
-            processMoveDown(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processMoveDown(width, height, sensor_values[sensorValueIdx].value);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "D")) {
-            processMoveRight(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processMoveRight(width, height, sensor_values[sensorValueIdx].value);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "CW")) {
-            processRotateCW(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processRotateCW(width, height, sensor_values[sensorValueIdx].value, false);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "CCW")) {
-            processRotateCCW(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processRotateCW(width, height, sensor_values[sensorValueIdx].value, true);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "MX")) {
-            processMirrorX(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processMirrorX(width, height, sensor_values[sensorValueIdx].value);
 //            printBMP(width, height, frame_buffer);
         } else if (!strcmp(sensor_values[sensorValueIdx].key, "MY")) {
-            processMirrorY(frame_buffer, width, height, sensor_values[sensorValueIdx].value);
+            processMirrorY(width, height, sensor_values[sensorValueIdx].value);
 //            printBMP(width, height, frame_buffer);
         }
         processed_frames += 1;
         if (processed_frames % 25 == 0) {
             if (scr_one)
-                frame_buffer = copyFrame(rendered_frame_one, frame_buffer, width, height);
+                memcpy(frame_buffer, rendered_frame_one, (width * height * 3) * sizeof(char));
             else
-                frame_buffer = copyFrame(rendered_frame_two, frame_buffer, width, height);
+                memcpy(frame_buffer, rendered_frame_two, (width * height * 3) * sizeof(char));
             verifyFrame(frame_buffer, width, height, grading_mode);
         }
     }
