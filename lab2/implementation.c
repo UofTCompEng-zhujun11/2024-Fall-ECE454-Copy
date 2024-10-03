@@ -1,9 +1,21 @@
 #include <asm-generic/errno.h>
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include "utilities.h"  // DO NOT REMOVE this line
 #include "implementation_reference.h"   // DO NOT REMOVE this line
+
+//#defines
+#define W 1
+#define A 2
+#define S 3
+#define D 3
+#define CW 4
+#define CCW 5
+#define MX 6
+#define MY 7
+#define OUTFRAME 25
 
 // Declariations
 void processMoveUp(unsigned width, unsigned height, int offset);
@@ -16,6 +28,14 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration, bool
 unsigned char *rendered_frame_one;
 unsigned char *rendered_frame_two;
 bool scr_one;
+//vg: vertical translation or general
+//h: horizontal translation
+struct processed_kv {
+    int key_vg;
+    int value_vg;
+    int key_h;
+    int value_h;
+};
 
 /***********************************************************************************************************************
  * @param buffer_frame - pointer pointing to a buffer storing the imported 24-bit bitmap image
@@ -305,8 +325,11 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration, bool
  * @param _unused - this field is unused
  * @return
  **********************************************************************************************************************/
-void processMirrorX(unsigned int width, unsigned int height, int _unused) {
+void processMirrorX(unsigned int width, unsigned int height, int mirror_iteration) {
 
+    if (mirror_iteration % 2 == 0)
+        return;
+    // printf("MX ran once\n");
     unsigned char * scr_frame;
     unsigned char * dest_frame;
     if (scr_one){
@@ -340,8 +363,10 @@ void processMirrorX(unsigned int width, unsigned int height, int _unused) {
  * @param _unused - this field is unused
  * @return
  **********************************************************************************************************************/
-void processMirrorY(unsigned width, unsigned height, int _unused) {
-
+void processMirrorY(unsigned width, unsigned height, int mirror_iteration) {
+    if (mirror_iteration % 2 == 0)
+        return;
+    // printf("MY ran once\n");
     unsigned char * scr_frame;
     unsigned char * dest_frame;
     if (scr_one){
@@ -403,7 +428,7 @@ void print_team_info(){
  ***********************************************************************************************************************
  *
  **********************************************************************************************************************/
-void implementation_driver(struct kv *sensor_values, int sensor_values_count, unsigned char *frame_buffer,
+void implementation_driver_old(struct kv *sensor_values, int sensor_values_count, unsigned char *frame_buffer,
                            unsigned int width, unsigned int height, bool grading_mode) {
     int processed_frames = 0;
     rendered_frame_one = allocateFrame(width, height);
@@ -447,6 +472,147 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
             verifyFrame(frame_buffer, width, height, grading_mode);
         }
     }
+    deallocateFrame(rendered_frame_one);
+    deallocateFrame(rendered_frame_two);
+    return;
+}
+
+void implementation_driver(struct kv *sensor_values, int sensor_values_count, unsigned char *frame_buffer,
+                           unsigned int width, unsigned int height, bool grading_mode) {
+    int output_end_frame;
+    int sensor_val_idx = 0;
+    int processed_array_idx;
+    bool seen_linear, seen_rotate, seen_mirrorX, seen_mirrorY;
+    struct processed_kv processed_kv_list[25];
+
+    rendered_frame_one = allocateFrame(width, height);
+    rendered_frame_two = allocateFrame(width, height);
+    memcpy(rendered_frame_one, frame_buffer, (width * height * 3) * sizeof(char));
+    scr_one = true;
+
+    while (sensor_val_idx < sensor_values_count) {
+        processed_array_idx = 0;
+        memset(processed_kv_list, 0, 25 * sizeof(struct processed_kv));
+        seen_linear = false;
+        seen_rotate = false;
+        seen_mirrorX = false;
+        seen_mirrorY = false;
+        output_end_frame = OUTFRAME + sensor_val_idx;
+
+        for (; sensor_val_idx < output_end_frame && sensor_val_idx < sensor_values_count; sensor_val_idx++){
+            // printf("in for loop %d\n", sensor_val_idx);
+            if (!strcmp(sensor_values[sensor_val_idx].key, "W")) {
+                // printf("W triggered\n");
+                if (seen_mirrorX || seen_mirrorY || seen_rotate)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_vg = W;
+                processed_kv_list[processed_array_idx].value_vg += sensor_values[sensor_val_idx].value;
+                seen_linear = true;
+                seen_mirrorX = false;
+                seen_mirrorY = false;
+                seen_rotate = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "A")) {
+                // printf("A triggered\n");
+                if (seen_mirrorX || seen_mirrorY || seen_rotate)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_h = A;
+                processed_kv_list[processed_array_idx].value_h += sensor_values[sensor_val_idx].value;
+                seen_linear = true;
+                seen_mirrorX = false;
+                seen_mirrorY = false;
+                seen_rotate = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "S")) {
+                if (seen_mirrorX || seen_mirrorY || seen_rotate)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_vg = W;
+                processed_kv_list[processed_array_idx].value_vg -= sensor_values[sensor_val_idx].value;
+                seen_linear = true;
+                seen_mirrorX = false;
+                seen_mirrorY = false;
+                seen_rotate = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "D")) {
+                if (seen_mirrorX || seen_mirrorY || seen_rotate)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_h = A;
+                processed_kv_list[processed_array_idx].value_h -= sensor_values[sensor_val_idx].value;
+                seen_linear = true;
+                seen_mirrorX = false;
+                seen_mirrorY = false;
+                seen_rotate = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "CW")) {
+                if (seen_linear || seen_mirrorX || seen_mirrorY)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_vg = CW;
+                processed_kv_list[processed_array_idx].value_vg += sensor_values[sensor_val_idx].value;
+                seen_rotate = true;
+                seen_linear = false;
+                seen_mirrorX = false;
+                seen_mirrorY = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "CCW")) {
+                if (seen_linear || seen_mirrorX || seen_mirrorY)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_vg = CW;
+                processed_kv_list[processed_array_idx].value_vg -= sensor_values[sensor_val_idx].value;
+                seen_rotate = true;
+                seen_linear = false;
+                seen_mirrorX = false;
+                seen_mirrorY = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "MX")) {
+                // printf("MX triggerd once\n");
+                if (seen_linear || seen_rotate || seen_mirrorY)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_vg = MX;
+                processed_kv_list[processed_array_idx].value_vg += 1;
+                seen_mirrorX = true;
+                seen_mirrorY = false;
+                seen_linear = false;
+                seen_rotate = false;
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "MY")) {
+                // printf("MY triggerd once\n");
+               if (seen_linear || seen_rotate || seen_mirrorX)
+                    processed_array_idx++;
+                processed_kv_list[processed_array_idx].key_vg = MY;
+                processed_kv_list[processed_array_idx].value_vg += 1;
+                seen_mirrorY = true;
+                seen_mirrorX = false;
+                seen_linear = false;
+                seen_rotate = false;
+            }
+        }
+        assert(processed_array_idx < 25);
+        for (int i = 0; i < 25; i++){
+            switch (processed_kv_list[i].key_vg) {
+                case W:
+                    processMoveUp(width, height, processed_kv_list[i].value_vg);
+                    break;
+                case CW:
+                    processRotateCW(width, height, processed_kv_list[i].value_vg, false);
+                    break;
+                case MX:
+                    processMirrorX(width, height, processed_kv_list[i].value_vg);
+                    break;
+                case MY:
+                    processMirrorY(width, height, processed_kv_list[i].value_vg);
+                    break;
+                case 0:
+                    break;
+                default:
+                    printf("Holy fucked\n");
+            }
+            if (processed_kv_list[i].key_h == A)
+                processMoveLeft(width, height, processed_kv_list[i].value_h);
+        }
+        // printf("before check sensor#: %d\n", sensor_val_idx);
+        if (sensor_val_idx % OUTFRAME == 0) {
+            // printf("sensor#: %d\n", sensor_val_idx);
+            if (scr_one)
+                memcpy(frame_buffer, rendered_frame_one, (width * height * 3) * sizeof(char));
+            else
+                memcpy(frame_buffer, rendered_frame_two, (width * height * 3) * sizeof(char));
+            verifyFrame(frame_buffer, width, height, grading_mode);
+        }
+    }
+
     deallocateFrame(rendered_frame_one);
     deallocateFrame(rendered_frame_two);
     return;
