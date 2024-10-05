@@ -31,9 +31,7 @@ void processMoveLeft(unsigned width, unsigned height, int offset);
 void processRotateCW(unsigned width, unsigned height, int rotate_iteration);
 
 // Variable Declarations
-unsigned char *rendered_frame_one;
-unsigned char *rendered_frame_two;
-bool scr_one;
+unsigned char *rendered_frame;
 //vg: vertical translation or general
 //h: horizontal translation
 /***********************************************************************************************************************
@@ -47,29 +45,14 @@ bool scr_one;
  **********************************************************************************************************************/
 void processMoveUp(unsigned width, unsigned height, int offset) {
 
-    unsigned char * scr_frame;
-    unsigned char * dest_frame;
-    if (scr_one){
-        scr_frame = rendered_frame_one;
-        dest_frame = rendered_frame_two;
-        scr_one = false;
-    } else {
-        scr_frame = rendered_frame_two;
-        dest_frame = rendered_frame_one;
-        scr_one = true;
-    }
-
     if (offset > 0){
-        memcpy(scr_frame, scr_frame + offset * width * 3, ((width - offset) * width * 3) * sizeof(char));
-        memset(scr_frame + (width - offset) * width * 3, 255, offset * width * 3 * sizeof(char));
-        memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
+        memcpy(rendered_frame, rendered_frame + offset * width * 3, ((width - offset) * width * 3) * sizeof(char));
+        memset(rendered_frame + (width - offset) * width * 3, 255, offset * width * 3 * sizeof(char));
     } else if (offset < 0) {
         offset *= -1;
-        memmove(scr_frame + offset * width * 3, scr_frame, ((width - offset) * width * 3) * sizeof(char));
-        memset(scr_frame, 255, offset * width * 3 * sizeof(char));
-        memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
+        memmove(rendered_frame + offset * width * 3, rendered_frame, ((width - offset) * width * 3) * sizeof(char));
+        memset(rendered_frame, 255, offset * width * 3 * sizeof(char));
     } else {
-        memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
         return;
     }
 
@@ -87,33 +70,18 @@ void processMoveUp(unsigned width, unsigned height, int offset) {
  **********************************************************************************************************************/
 void processMoveLeft(unsigned width, unsigned height, int offset) {
 
-    unsigned char * scr_frame;
-    unsigned char * dest_frame;
-    if (scr_one){
-        scr_frame = rendered_frame_one;
-        dest_frame = rendered_frame_two;
-        scr_one = false;
-    } else {
-        scr_frame = rendered_frame_two;
-        dest_frame = rendered_frame_one;
-        scr_one = true;
-    }
-
     if (offset > 0) {
         for (int row = 0; row < width; row++){
-            memcpy(scr_frame + row * width * 3, scr_frame + row * width * 3 + offset * 3, (width - offset) * 3 * sizeof(char));
-            memset(scr_frame + row * width * 3 + (width - offset) * 3, 255, offset * 3 * sizeof(char));
+            memcpy(rendered_frame + row * width * 3, rendered_frame + row * width * 3 + offset * 3, (width - offset) * 3 * sizeof(char));
+            memset(rendered_frame + row * width * 3 + (width - offset) * 3, 255, offset * 3 * sizeof(char));
         }
-        memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
     } else if (offset < 0) {
         offset *= -1;
         for (int row = 0; row < width; row++){
-            memmove(scr_frame + row * width * 3 + offset * 3, scr_frame + row * width * 3, (width - offset) * 3 * sizeof(char));
-            memset(scr_frame + row * width * 3, 255, offset * 3 * sizeof(char));
+            memmove(rendered_frame + row * width * 3 + offset * 3, rendered_frame + row * width * 3, (width - offset) * 3 * sizeof(char));
+            memset(rendered_frame + row * width * 3, 255, offset * 3 * sizeof(char));
         }
-        memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
     } else {
-        memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
         return;
     }
     
@@ -134,105 +102,69 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration) {
     if (!rotate_iteration)
         return;
 
-    unsigned char * scr_frame;
-    unsigned char * dest_frame;
-    int totalElements = width * width;
-    int halfElements = totalElements / 2;
-    char temp1[3];
+    int total_pixal = width * width;
+    int half_pixals = total_pixal / 2;
+    int row, col;
+    int scr_idx, dest_idx;
+    int array_opposite_idx;
+    char temp[3];
 
     // store shifted pixels to temporary buffer
     switch (rotate_iteration) {
         case 3:
-            if (scr_one){
-                scr_frame = rendered_frame_one;
-                dest_frame = rendered_frame_two;
-                scr_one = false;
-            } else {
-                scr_frame = rendered_frame_two;
-                dest_frame = rendered_frame_one;
-                scr_one = true;
-            }
-    
-            int i, j;
-            char* temp2[3];
             // Transpose the matrix
-            for (i = 0; i < width; ++i) {
-                for (j = i + 1; j < width; ++j) {
-                    int idx1 = i * width * 3 + j * 3;
-                    int idx2 = j * width * 3 + i * 3;
-                    memcpy(temp2, scr_frame + idx1, 3 * sizeof(char));
-                    memcpy(scr_frame + idx1, scr_frame + idx2, 3 * sizeof(char));
-                    memcpy(scr_frame + idx2, temp2, 3 * sizeof(char));
+            for (row = 0; row < width; ++row) {
+                for (col = row + 1; col < width; ++col) {
+                    dest_idx = row * width * 3 + col * 3;
+                    scr_idx = col * width * 3 + row * 3;
+                    memcpy(temp, rendered_frame + dest_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + dest_idx, rendered_frame + scr_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + scr_idx, temp, 3 * sizeof(char));
                 }
             }
 
             // Reverse each row
-            for (j = 0; j < width; ++j) {
-                for (i = 0; i < width / 2; ++i) {
-                    int idx1 = i * width * 3 + j * 3;
-                    int idx2 = (width - i - 1) * width * 3 + j * 3;
-                    memcpy(temp2, scr_frame + idx1, 3 * sizeof(char));
-                    memcpy(scr_frame + idx1, scr_frame + idx2, 3 * sizeof(char));
-                    memcpy(scr_frame + idx2, temp2, 3 * sizeof(char));
+            for (col = 0; col < width; ++col) {
+                for (row = 0; row < width / 2; ++row) {
+                    dest_idx = row * width * 3 + col * 3;
+                    scr_idx = (width - row - 1) * width * 3 + col * 3;
+                    memcpy(temp, rendered_frame + dest_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + dest_idx, rendered_frame + scr_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + scr_idx, temp, 3 * sizeof(char));
                 }
             }
-            memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
             break;
         case 1:
-            if (scr_one){
-                scr_frame = rendered_frame_one;
-                dest_frame = rendered_frame_two;
-                scr_one = false;
-            } else {
-                scr_frame = rendered_frame_two;
-                dest_frame = rendered_frame_one;
-                scr_one = true;
-            }
-    
-            char* temp[3];
             // Transpose the matrix
-            for (int i = 0; i < width; ++i) {
-                for (int j = i + 1; j < width; ++j) {
-                    int idx1 = i * width * 3 + j * 3;
-                    int idx2 = j * width * 3 + i * 3;
-                    memcpy(temp, scr_frame + idx1, 3 * sizeof(char));
-                    memcpy(scr_frame + idx1, scr_frame + idx2, 3 * sizeof(char));
-                    memcpy(scr_frame + idx2, temp, 3 * sizeof(char));
+            for (row = 0; row < width; ++row) {
+                for (col = row + 1; col < width; ++col) {
+                    dest_idx = row * width * 3 + col * 3;
+                    scr_idx = col * width * 3 + row * 3;
+                    memcpy(temp, rendered_frame + dest_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + dest_idx, rendered_frame + scr_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + scr_idx, temp, 3 * sizeof(char));
                 }
             }
 
             // Reverse each row
-            for (int i = 0; i < width; ++i) {
-                for (int j = 0; j < width / 2; ++j) {
-                    int idx1 = i * width * 3 + j * 3;
-                    int idx2 = i * width * 3 + (width - j - 1) * 3;
-                    memcpy(temp, scr_frame + idx1, 3 * sizeof(char));
-                    memcpy(scr_frame + idx1, scr_frame + idx2, 3 * sizeof(char));
-                    memcpy(scr_frame + idx2, temp, 3 * sizeof(char));
+            for (row = 0; row < width; ++row) {
+                for (col = 0; col < width / 2; ++col) {
+                    dest_idx = row * width * 3 + col * 3;
+                    scr_idx = row * width * 3 + (width - col - 1) * 3;
+                    memcpy(temp, rendered_frame + dest_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + dest_idx, rendered_frame + scr_idx, 3 * sizeof(char));
+                    memcpy(rendered_frame + scr_idx, temp, 3 * sizeof(char));
                 }
             }
-            memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
             break;
 
         case 2:
-            // printf("rotate: %d\n", 2);
-            if (scr_one){
-                scr_frame = rendered_frame_one;
-                dest_frame = rendered_frame_two;
-                scr_one = false;
-            } else {
-                scr_frame = rendered_frame_two;
-                dest_frame = rendered_frame_one;
-                scr_one = true;
+            for (row = 0; row < half_pixals; ++row) {
+                array_opposite_idx = (total_pixal - row - 1) * 3;
+                memcpy(temp, rendered_frame + row * 3, 3 * sizeof(char));
+                memcpy(rendered_frame + row * 3, rendered_frame + array_opposite_idx, 3 * sizeof(char));
+                memcpy(rendered_frame + array_opposite_idx, temp, 3 * sizeof(char));
             }
-            for (int i = 0; i < halfElements; ++i) {
-                // printf("total:%d\n", totalElements);
-                int oppositeIndex = (totalElements - i - 1) * 3;
-                memcpy(temp1, scr_frame + i * 3, 3 * sizeof(char));
-                memcpy(scr_frame + i * 3, scr_frame + oppositeIndex, 3 * sizeof(char));
-                memcpy(scr_frame + oppositeIndex, temp1, 3 * sizeof(char));
-            }
-            memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
             break;
     }
     return;
@@ -249,27 +181,18 @@ void processMirrorX(unsigned int width, unsigned int height, int mirror_iteratio
 
     if (mirror_iteration % 2 == 0)
         return;
-    // printf("MX ran once\n");
-    unsigned char * scr_frame;
-    unsigned char * dest_frame;
-    if (scr_one){
-        scr_frame = rendered_frame_one;
-        dest_frame = rendered_frame_two;
-        scr_one = false;
-    } else {
-        scr_frame = rendered_frame_two;
-        dest_frame = rendered_frame_one;
-        scr_one = true;
-    }
-    char* temp[10000];
 
+    char* temp[10000];
+    int dest_idx, scr_idx;
+    int row_len = width * 3;
     // store shifted pixels to temporary buffer
     for (int row = 0; row < width / 2; row++) {
-        memcpy(temp, scr_frame + row * width * 3, width * 3 *sizeof(char));
-        memcpy(scr_frame + row * width * 3, scr_frame + (width - row - 1) * width *3, width * 3 * sizeof(char));
-        memcpy(scr_frame + (width - row - 1) * width *3, temp, width * 3 * sizeof(char));
+        dest_idx = row * width * 3;
+        scr_idx = (width - row - 1) * width *3;
+        memcpy(temp, rendered_frame + dest_idx, row_len *sizeof(char));
+        memcpy(rendered_frame + dest_idx, rendered_frame + scr_idx, row_len * sizeof(char));
+        memcpy(rendered_frame + scr_idx, temp, row_len * sizeof(char));
     }
-    memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
 
     return;
 }
@@ -284,31 +207,20 @@ void processMirrorX(unsigned int width, unsigned int height, int mirror_iteratio
 void processMirrorY(unsigned width, unsigned height, int mirror_iteration) {
     if (mirror_iteration % 2 == 0)
         return;
-    // printf("MY ran once\n");
-    unsigned char * scr_frame;
-    unsigned char * dest_frame;
-    if (scr_one){
-        scr_frame = rendered_frame_one;
-        dest_frame = rendered_frame_two;
-        scr_one = false;
-    } else {
-        scr_frame = rendered_frame_two;
-        dest_frame = rendered_frame_one;
-        scr_one = true;
-    }
+
     char* temp[3];
+    int scr_idx, dest_idx;
 
     // store shifted pixels to temporary buffer
     for (int row = 0; row < height; row++) {
         for (int column = 0; column < width / 2; column++) {
-            int position_rendered_frame = row * height * 3 + column * 3;
-            int position_buffer_frame = row * height * 3 + (width - column - 1) * 3;
-            memcpy(temp, scr_frame + position_rendered_frame, 3 * sizeof(char));
-            memcpy(scr_frame + position_rendered_frame, scr_frame + position_buffer_frame, 3 * sizeof(char));
-            memcpy(scr_frame + position_buffer_frame, temp, 3 * sizeof(char));
+            dest_idx = row * height * 3 + column * 3;
+            scr_idx = row * height * 3 + (width - column - 1) * 3;
+            memcpy(temp, rendered_frame + dest_idx, 3 * sizeof(char));
+            memcpy(rendered_frame + dest_idx, rendered_frame + scr_idx, 3 * sizeof(char));
+            memcpy(rendered_frame + scr_idx, temp, 3 * sizeof(char));
         }
     }
-    memcpy(dest_frame, scr_frame, (width * height * 3) * sizeof(char));
 
     return;
 }
@@ -348,10 +260,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     bool traking_rotate, tracking_mirrorX, tracking_mirrorY, update_modifier;
     int processed_kv_list[7];
 
-    rendered_frame_one = allocateFrame(width, height);
-    rendered_frame_two = allocateFrame(width, height);
-    memcpy(rendered_frame_one, frame_buffer, (width * height * 3) * sizeof(char));
-    scr_one = true;
+    rendered_frame = allocateFrame(width, height);
+    memcpy(rendered_frame, frame_buffer, (width * height * 3) * sizeof(char));
 
     while (sensor_val_idx < sensor_values_count) {
         W_idx = 0;
@@ -502,14 +412,11 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         processMirrorX(width, height, processed_kv_list[5]);
         processMirrorY(width, height, processed_kv_list[6]);
         if (sensor_val_idx % OUTFRAME == 0) {
-            if (scr_one)
-                memcpy(frame_buffer, rendered_frame_one, (width * height * 3) * sizeof(char));
-            else
-                memcpy(frame_buffer, rendered_frame_two, (width * height * 3) * sizeof(char));
+            // printf("sensor#: %d\n", sensor_val_idx);
+            memcpy(frame_buffer, rendered_frame, (width * height * 3) * sizeof(char));
             verifyFrame(frame_buffer, width, height, grading_mode);
         }
     }
-    deallocateFrame(rendered_frame_one);
-    deallocateFrame(rendered_frame_two);
+    deallocateFrame(rendered_frame);
     return;
 }
