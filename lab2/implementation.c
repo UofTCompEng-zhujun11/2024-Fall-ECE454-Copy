@@ -23,6 +23,10 @@
 #define CW3 0b001000
 #define MX1 0b010000
 #define MY1 0b100000
+#define TMX 0b0001
+#define TMY 0b0010
+#define TR 0b0100
+#define UPM 0b1000
 
 
 // Declariations
@@ -257,7 +261,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
     int rotation_it, mirror_it;
     int local_rotate_it, local_mirrorX_it, local_mirrorY_it;
     u_int8_t modification_flags; //0b000001 = CW0, 0b000010 = CW1, 0b000100 = CW2, 0b001000 = CW3, 0b010000 = MX, 0b100000 = MY
-    bool traking_rotate, tracking_mirrorX, tracking_mirrorY, update_modifier;
+    u_int8_t tracking_flag;
     int processed_kv_list[7];
 
     rendered_frame = allocateFrame(width, height);
@@ -273,10 +277,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         MY_idx = 6;
         CW_modifier = 1; //3 = invert or 1 = normal
         modification_flags = 0b000000;
-        tracking_mirrorX = false;
-        tracking_mirrorY = false;
-        traking_rotate = false;
-        update_modifier = false;
+        tracking_flag = 0b0;
         local_mirrorX_it = 0;
         local_mirrorY_it = 0;
         local_rotate_it = 0;
@@ -301,24 +302,24 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
 
             } else if (!strcmp(sensor_values[sensor_val_idx].key, "CW")) {
                 local_rotate_it += sensor_values[sensor_val_idx].value;
-                traking_rotate = true;
+                tracking_flag = TR;
 
             } else if (!strcmp(sensor_values[sensor_val_idx].key, "CCW")) {
                 local_rotate_it -= sensor_values[sensor_val_idx].value;
-                traking_rotate = true;
+                tracking_flag = TR;
 
             } else if (!strcmp(sensor_values[sensor_val_idx].key, "MX")) {
                 // printf("MX triggerd once\n");
                 local_mirrorX_it += 1;
-                tracking_mirrorX = true;
+                tracking_flag = TMX;
 
             } else if (!strcmp(sensor_values[sensor_val_idx].key, "MY")) {
                 // printf("MY triggerd once\n");
                 local_mirrorY_it += 1;
-                tracking_mirrorY = true;
+                tracking_flag = TMY;
             }
             if (sensor_val_idx < sensor_values_count - 1){
-                if (traking_rotate && ((strcmp(sensor_values[sensor_val_idx + 1].key, "CW") != 0 
+                if (tracking_flag & TR && ((strcmp(sensor_values[sensor_val_idx + 1].key, "CW") != 0 
                                    && strcmp(sensor_values[sensor_val_idx + 1].key, "CCW") != 0)
                                    || sensor_val_idx == output_end_frame - 1)){
                     rotation_it = ((local_rotate_it % 4 + 4) * CW_modifier) % 4;
@@ -326,37 +327,34 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                     processed_kv_list[R_idx] += rotation_it;
                     modification_flags = (0b1 << (local_rotate_it % 4 + 4) % 4);
                     local_rotate_it = 0;
-                    traking_rotate = false;
-                    update_modifier = true;
+                    tracking_flag = UPM;
 
-                } else if (tracking_mirrorX && (strcmp(sensor_values[sensor_val_idx + 1].key, "MX") != 0 
+                } else if (tracking_flag & TMX && (strcmp(sensor_values[sensor_val_idx + 1].key, "MX") != 0 
                                             || sensor_val_idx == output_end_frame - 1)){
                     mirror_it = local_mirrorX_it % 2;
                     processed_kv_list[MX_idx] += mirror_it;
                     modification_flags = (mirror_it == 0) ? noop : MX1;
                     local_mirrorX_it = 0;
-                    tracking_mirrorX = false;
-                    update_modifier = true;
+                    tracking_flag = UPM;
 
-                } else if (tracking_mirrorY && (strcmp(sensor_values[sensor_val_idx + 1].key, "MY") != 0 
+                } else if (tracking_flag & TMY && (strcmp(sensor_values[sensor_val_idx + 1].key, "MY") != 0 
                                             || sensor_val_idx == output_end_frame - 1)){
                     mirror_it = local_mirrorY_it % 2;
                     processed_kv_list[MY_idx] += mirror_it;
                     modification_flags = (mirror_it == 0) ? noop : MY1;
                     local_mirrorY_it = 0;
-                    tracking_mirrorY = false;
-                    update_modifier = true;
+                    tracking_flag = UPM;
                 }
             } else {
-                if (traking_rotate){
+                if (tracking_flag & TR){
                     rotation_it = ((local_rotate_it % 4 + 4) * CW_modifier) % 4;
                     processed_kv_list[R_idx] += rotation_it;
-                } else if (tracking_mirrorX)
+                } else if (tracking_flag & TMX)
                     processed_kv_list[MX_idx] += local_mirrorX_it;
-                else if (tracking_mirrorY)
+                else if (tracking_flag & TMY)
                     processed_kv_list[MY_idx] += local_mirrorY_it;
             }
-            if (update_modifier){
+            if (tracking_flag & UPM){
                 switch (modification_flags) {
                     case noop:
                         break;
@@ -400,8 +398,8 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                 }
                 // printf("mod = %d\n", modification_flags);
                 // printf("W_idx = %d, A_idx = %d, S_idx = %d, D_idx = %d \n", W_idx, A_idx, S_idx, D_idx);
-                update_modifier = false;
                 modification_flags = noop;
+                tracking_flag = 0;
             }
             // printf("A is %d\n", processed_kv_list[1]);
 
