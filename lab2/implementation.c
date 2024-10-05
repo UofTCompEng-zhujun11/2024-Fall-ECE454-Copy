@@ -85,6 +85,7 @@ void processMoveLeft(unsigned width, unsigned height, int offset) {
         return;
     }
     
+
     return;
 }
 
@@ -111,7 +112,7 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration) {
     // store shifted pixels to temporary buffer
     switch (rotate_iteration) {
         case 3:
-            // Matrix transposation
+            // Transpose the matrix
             for (row = 0; row < width; ++row) {
                 for (col = row + 1; col < width; ++col) {
                     dest_idx = row * width * 3 + col * 3;
@@ -122,7 +123,7 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration) {
                 }
             }
 
-            // Reverse cols
+            // Reverse each row
             for (col = 0; col < width; ++col) {
                 for (row = 0; row < width / 2; ++row) {
                     dest_idx = row * width * 3 + col * 3;
@@ -134,7 +135,7 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration) {
             }
             break;
         case 1:
-            // Matrix transposation
+            // Transpose the matrix
             for (row = 0; row < width; ++row) {
                 for (col = row + 1; col < width; ++col) {
                     dest_idx = row * width * 3 + col * 3;
@@ -145,7 +146,7 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration) {
                 }
             }
 
-            // Reverse rows
+            // Reverse each row
             for (row = 0; row < width; ++row) {
                 for (col = 0; col < width / 2; ++col) {
                     dest_idx = row * width * 3 + col * 3;
@@ -165,8 +166,6 @@ void processRotateCW(unsigned width, unsigned height, int rotate_iteration) {
                 memcpy(rendered_frame + array_opposite_idx, temp, 3 * sizeof(char));
             }
             break;
-        default:
-            assert(false);
     }
     return;
 }
@@ -222,6 +221,7 @@ void processMirrorY(unsigned width, unsigned height, int mirror_iteration) {
             memcpy(rendered_frame + scr_idx, temp, 3 * sizeof(char));
         }
     }
+
     return;
 }
 
@@ -251,15 +251,14 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                            unsigned int width, unsigned int height, bool grading_mode) {
     int output_end_frame;
     int sensor_val_idx = 0;
-    int W_idx, A_idx, S_idx, D_idx, R_idx, MX_idx, MY_idx;
-    int CW_modifier;
-    int temp;
+    u_int8_t W_idx, A_idx, S_idx, D_idx, R_idx, MX_idx, MY_idx;
+    u_int8_t CW_modifier;
+    u_int8_t temp;
     int rotation_it, mirror_it;
     int local_rotate_it, local_mirrorX_it, local_mirrorY_it;
     u_int8_t modification_flags; //0b000001 = CW0, 0b000010 = CW1, 0b000100 = CW2, 0b001000 = CW3, 0b010000 = MX, 0b100000 = MY
     bool traking_rotate, tracking_mirrorX, tracking_mirrorY, update_modifier;
     int processed_kv_list[7];
-    int strcmp_val;
 
     rendered_frame = allocateFrame(width, height);
     memcpy(rendered_frame, frame_buffer, (width * height * 3) * sizeof(char));
@@ -285,43 +284,45 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         output_end_frame = OUTFRAME + sensor_val_idx;
 
         for (; sensor_val_idx < output_end_frame && sensor_val_idx < sensor_values_count; sensor_val_idx++){
-            strcmp_val = strcmp(sensor_values[sensor_val_idx].key, "M");
-            switch (strcmp_val) {
-                case 10:
-                    processed_kv_list[W_idx] += sensor_values[sensor_val_idx].value;
-                    break;
-                case -12:
-                    processed_kv_list[A_idx] += sensor_values[sensor_val_idx].value;
-                    break;
-                case 6:
-                    processed_kv_list[S_idx] += sensor_values[sensor_val_idx].value;
-                    break;
-                case -9:
-                    processed_kv_list[D_idx] += sensor_values[sensor_val_idx].value;
-                    break;
-                case -10:
-                    if (!strcmp(sensor_values[sensor_val_idx].key, "CW")){
-                        local_rotate_it += sensor_values[sensor_val_idx].value;
-                        traking_rotate = true;
-                        break;
-                    }
-                    local_rotate_it -= sensor_values[sensor_val_idx].value;
-                    traking_rotate = true;
-                    break;
-                case 88:
-                    local_mirrorX_it += 1;
-                    tracking_mirrorX = true;
-                    break;
-                case 89:
-                    local_mirrorY_it += 1;
-                    tracking_mirrorY = true;
-                    break;
+            // printf("in for loop %d\n", sensor_val_idx);
+            if (!strcmp(sensor_values[sensor_val_idx].key, "W")) {
+                // printf("W triggered\n");
+                processed_kv_list[W_idx] += sensor_values[sensor_val_idx].value;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "A")) {
+                // printf("A triggered\n");
+                processed_kv_list[A_idx] += sensor_values[sensor_val_idx].value;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "S")) {
+                processed_kv_list[S_idx] += sensor_values[sensor_val_idx].value;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "D")) {
+                processed_kv_list[D_idx] += sensor_values[sensor_val_idx].value;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "CW")) {
+                local_rotate_it += sensor_values[sensor_val_idx].value;
+                traking_rotate = true;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "CCW")) {
+                local_rotate_it -= sensor_values[sensor_val_idx].value;
+                traking_rotate = true;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "MX")) {
+                // printf("MX triggerd once\n");
+                local_mirrorX_it += 1;
+                tracking_mirrorX = true;
+
+            } else if (!strcmp(sensor_values[sensor_val_idx].key, "MY")) {
+                // printf("MY triggerd once\n");
+                local_mirrorY_it += 1;
+                tracking_mirrorY = true;
             }
             if (sensor_val_idx < sensor_values_count - 1){
                 if (traking_rotate && ((strcmp(sensor_values[sensor_val_idx + 1].key, "CW") != 0 
                                    && strcmp(sensor_values[sensor_val_idx + 1].key, "CCW") != 0)
                                    || sensor_val_idx == output_end_frame - 1)){
                     rotation_it = ((local_rotate_it % 4 + 4) * CW_modifier) % 4;
+                    // printf("local effective CW: %d, CW_modifier = %d\n", rotation_it, CW_modifier);
                     processed_kv_list[R_idx] += rotation_it;
                     modification_flags = (0b1 << (local_rotate_it % 4 + 4) % 4);
                     local_rotate_it = 0;
@@ -394,13 +395,16 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
                         D_idx = temp;
                         break;
                     default:
-                        assert(false);
-                        // printf("Holy fuck mod = %d\n", modification_flags);
-                        // printf("fucked at %d\n", sensor_val_idx);
+                        printf("Holy fuck mod = %d\n", modification_flags);
+                        printf("fucked at %d\n", sensor_val_idx);
                 }
+                // printf("mod = %d\n", modification_flags);
+                // printf("W_idx = %d, A_idx = %d, S_idx = %d, D_idx = %d \n", W_idx, A_idx, S_idx, D_idx);
                 update_modifier = false;
                 modification_flags = noop;
             }
+            // printf("A is %d\n", processed_kv_list[1]);
+
         }
         processMoveUp(width, height, processed_kv_list[0] - processed_kv_list[2]);
         processMoveLeft(width, height, processed_kv_list[1] - processed_kv_list[3]);
@@ -408,6 +412,7 @@ void implementation_driver(struct kv *sensor_values, int sensor_values_count, un
         processMirrorX(width, height, processed_kv_list[5]);
         processMirrorY(width, height, processed_kv_list[6]);
         if (sensor_val_idx % OUTFRAME == 0) {
+            // printf("sensor#: %d\n", sensor_val_idx);
             memcpy(frame_buffer, rendered_frame, (width * height * 3) * sizeof(char));
             verifyFrame(frame_buffer, width, height, grading_mode);
         }
