@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include "list.h"
+#include <pthread.h>
 
 #define HASH_INDEX(_addr,_size_mask) (((_addr) >> 2) & (_size_mask))
 
@@ -15,7 +16,7 @@ template<class Ele, class Keytype> class hash {
   unsigned my_size;
   unsigned my_size_mask;
   list<Ele,Keytype> *entries;
-  list<Ele,Keytype> *get_list(unsigned the_idx);
+  pthread_mutex_t* list_locks; // Array of locks for each list
 
  public:
   void setup(unsigned the_size_log=5);
@@ -24,6 +25,10 @@ template<class Ele, class Keytype> class hash {
   void print(FILE *f=stdout);
   void reset();
   void cleanup();
+  list<Ele,Keytype> *get_list(unsigned the_idx);
+  // list-lock versions
+  Ele* lookup_threaded(Keytype the_key);
+  void insert_threaded(Ele* e);
 };
 
 template<class Ele, class Keytype> 
@@ -33,6 +38,12 @@ hash<Ele,Keytype>::setup(unsigned the_size_log){
   my_size = 1 << my_size_log;
   my_size_mask = (1 << my_size_log) - 1;
   entries = new list<Ele,Keytype>[my_size];
+
+  // Initialize locks for each lsit
+  list_locks = new pthread_mutex_t[my_size];
+  for (unsigned i = 0; i < my_size; i++) {
+    pthread_mutex_init(&list_locks[i], NULL);
+  }
 }
 
 template<class Ele, class Keytype> 
@@ -53,6 +64,19 @@ hash<Ele,Keytype>::lookup(Keytype the_key){
   l = &entries[HASH_INDEX(the_key,my_size_mask)];
   return l->lookup(the_key);
 }  
+
+// lookup with list-level locking
+template<class Ele, class Keytype> 
+Ele *
+hash<Ele,Keytype>::lookup_threaded(Keytype the_key) {
+  int bucket_idx = HASH_INDEX(the_key, my_size_mask);
+
+  pthread_mutex_lock(&list_locks[bucket_idx]);
+  Ele* result = entries[bucket_idx].lookup(the_key);
+  pthread_mutex_unlock(&list_locks[bucket_idx]);
+
+  return result;
+}
 
 template<class Ele, class Keytype> 
 void 
@@ -78,7 +102,14 @@ void
 hash<Ele,Keytype>::cleanup(){
   unsigned i;
   reset();
+
+  // Destroy locks
+  for (i = 0; i < my_size; i++) {
+    pthread_mutex_destroy(&list_locks[i]);
+  }
+
   delete [] entries;
+  delete [] list_locks;
 }
 
 template<class Ele, class Keytype> 
@@ -87,5 +118,17 @@ hash<Ele,Keytype>::insert(Ele *e){
   entries[HASH_INDEX(e->key(),my_size_mask)].push(e);
 }
 
+// insert with list-level locking
+template<class Ele, class Keytype>
+void 
+hash<Ele, Keytype>::insert_threaded(Ele* e) {
+  int bucket_idx = HASH_INDEX(e->key(), my_size_mask);
+
+  pthread_mutex_lock(&list_locks[bucket_idx]);
+  entries[bucket_idx].push(e);
+  pthread_mutex_unlock(&list_locks[bucket_idx]);
+
+  return;
+}
 
 #endif

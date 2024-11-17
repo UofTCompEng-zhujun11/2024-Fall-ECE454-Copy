@@ -78,7 +78,7 @@ main (int argc, char* argv[]){
 
       // skip a number of samples
       for (k=0; k<samples_to_skip; k++){
-	rnum = rand_r((unsigned int*)&rnum);
+	      rnum = rand_r((unsigned int*)&rnum);
       }
 
       // force the sample to be within the range of 0..RAND_NUM_UPPER_BOUND-1
@@ -86,10 +86,9 @@ main (int argc, char* argv[]){
 
       // if this sample has not been counted before
       if (!(s = h.lookup(key))){
-	
-	// insert a new element for it into the hash table
-	s = new sample(key);
-	h.insert(s);
+	      // insert a new element for it into the hash table
+	      s = new sample(key);
+	      h.insert(s);
       }
 
       // increment the count for the sample
