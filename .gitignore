@@ -1,2 +1,6 @@
 .cache/
 .DS_Store
+.vscode
+gmon.out
+lab4/outputs
+lab4/timing_results
