@@ -3,8 +3,8 @@ project(
   'c',
   default_options : [
     'buildtype=plain',
-    'debug=true',
-    'optimization=plain',
+    'debug=false',
+    'optimization=3',
     'cpp_std=gnu++23',
     'b_pie=true',
   ]
