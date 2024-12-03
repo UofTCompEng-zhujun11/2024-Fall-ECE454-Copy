@@ -37,6 +37,7 @@ game_of_life (char* outboard,
 	      const int ncols,
 	      const int gens_max)
 {
+    if (nrows > 10000) return inboard;
     const int LDA = nrows;
     row *rowIn = (row*) malloc(10000 * sizeof(*rowIn));
     row *rowOut = (row*) malloc(10000 * sizeof(*rowOut));
@@ -84,15 +85,15 @@ game_of_life (char* outboard,
         }
         //if there are live cells in this row, set tail ptr to the last life cell, else point to [0], which is -1
         //buffer enought -1 to make sure garbege wont be picked up
-        rowIn[i].x_cords[x_cords_idx] = -1;
+        rowIn[i].x_cords[x_cords_idx] = 50000;
         // printf("%d ", rowIn[i].x_cords[x_cords_idx]);
-        rowIn[i].x_cords[x_cords_idx + 1] = -1;
+        rowIn[i].x_cords[x_cords_idx + 1] = 50000;
         // printf("%d ", rowIn[i].x_cords[x_cords_idx + 1]);
-        rowIn[i].x_cords[x_cords_idx + 2] = -1;
+        rowIn[i].x_cords[x_cords_idx + 2] = 50000;
         // printf("%d ", rowIn[i].x_cords[x_cords_idx + 2]);
-        rowIn[i].x_cords[x_cords_idx + 3] = -1;
+        rowIn[i].x_cords[x_cords_idx + 3] = 50000;
         // printf("%d ", rowIn[i].x_cords[x_cords_idx + 3]);
-        rowIn[i].x_cords[x_cords_idx + 4] = -1;
+        rowIn[i].x_cords[x_cords_idx + 4] = 50000;
         // printf("%d ", rowIn[i].x_cords[x_cords_idx + 4]);
         if (x_cords_idx != 0)
             rowIn[i].x_tail = &rowIn[i].x_cords[x_cords_idx - 1];
@@ -117,21 +118,16 @@ game_of_life (char* outboard,
             prev = rowIn[row].prev->x_cords;
             next = rowIn[row].next->x_cords;
             out = rowOut[row].x_cords;
-            x = -1;
-            *out = -1;
+            x = 50000;
+            *out = 50000;
             rowOut[row].x_tail = out;
-            if (*this != -1) x = *this;
-            if (*prev != -1) x = *prev;
-            if (*next != -1) x = *next;
-            if (x == -1)
-                continue; //entire scan line is empty
+            x = *prev;
             //find the left most cell
-            if(x > *prev && *prev != -1)
-	    		x = *prev;
-	    	if(x > *this && *this != -1)
+	    	if(x > *this)
 	    		x = *this;
-	    	if(x > *next && *next != -1)
+	    	if(x > *next)
 	    		x = *next;
+            if (x == 50000) break; //scan line empty
             
             //fecth tail x cords for the current scan line (largest x in scan line)
             x_tail_this = rowIn[row].x_tail;
@@ -193,12 +189,13 @@ game_of_life (char* outboard,
                     //just written the cell at ncol - 2
                     if (x >= ncols) break;
 	    		}
-                /* skip to the leftmost cell */
-	    		x = -1;
-                if (*this != -1) x = *this;
-                if (*prev != -1) x = *prev;
-                if (*next != -1) x = *next;
-                if (x == -1){
+                x = *prev;
+                //find the left most cell
+	    	    if(x > *this)
+	    	    	x = *this;
+	    	    if(x > *next)
+	    	    	x = *next;
+                if (x == 50000){
                     //handle wrapping at x = ncol -1
                     // printf("    tail wrap entry bitmap @ x = %d is: %d\n", x, bitmap);
                     //insert column at x = 0 into bitmap[6-8]
@@ -217,23 +214,16 @@ game_of_life (char* outboard,
                     }
                     break; //entire scan line is empty
                 }
-                //find the left most cell
-                if(x > *prev && *prev != -1)
-	    	    	x = *prev;
-	    	    if(x > *this && *this != -1)
-	    	    	x = *this;
-	    	    if(x > *next && *next != -1)
-	    	    	x = *next;
 	    	}
             rowOut[row].x_tail = --out;
             out++;
             //terminate xcord array
-            *out++ = -1;
-            *out++ = -1;
-            *out++ = -1;
-            *out++ = -1;
-            *out++ = -1;
-            for (int j = 0; rowOut[row].x_cords[j] != -1; j++){
+            *out++ = 50000;
+            *out++ = 50000;
+            *out++ = 50000;
+            *out++ = 50000;
+            *out++ = 50000;
+            for (int j = 0; rowOut[row].x_cords[j] != 50000; j++){
                 // printf("%d ", rowOut[row].x_cords[j]);
             }
             // printf("\n");
@@ -245,7 +235,7 @@ game_of_life (char* outboard,
 
     memset(outboard, 0, sizeof(char) * ncols * nrows * 2);
     for (int i = 0; i < nrows; i++){
-        for (int j = 0; rowIn[i].x_cords[j] != -1; j++){
+        for (int j = 0; rowIn[i].x_cords[j] != 50000; j++){
             BOARD(outboard, i, rowIn[i].x_cords[j]) = 1;
         }
     }
