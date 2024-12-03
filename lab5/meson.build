@@ -19,7 +19,6 @@ executable('gol_verify',
   'load.c',
   'save.c',
   c_args : '-DVERIFY_FLAG',
-  dependencies : openmp,
 )
 
 executable('gol',
@@ -28,7 +27,6 @@ executable('gol',
   'lifeseq.c',
   'load.c',
   'save.c',
-  dependencies : openmp,
 )
 
 executable('initboard',
