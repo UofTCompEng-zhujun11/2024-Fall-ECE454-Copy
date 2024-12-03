@@ -37,7 +37,12 @@ typedef struct {
   row* rowOut;
   int ncols;
   int nrows;
-} thread_arg_t;
+} processNextRows_arg_t;
+
+// Thread argument
+typedef struct {
+  int thread_id;
+} initStateList_arg_t;
 
 void* processNextRows(void* arg){
     int bitmap;
@@ -46,11 +51,11 @@ void* processNextRows(void* arg){
     int *out;
     int x;
 
-    int nrows = ((thread_arg_t*)arg)->nrows;
-    int ncols = ((thread_arg_t*)arg)->ncols;
-    int threadId = ((thread_arg_t*)arg)->thread_id;
-    row* rowIn = ((thread_arg_t*)arg)->rowIn;
-    row* rowOut = ((thread_arg_t*)arg)->rowOut;
+    int nrows = ((processNextRows_arg_t*)arg)->nrows;
+    int ncols = ((processNextRows_arg_t*)arg)->ncols;
+    int threadId = ((processNextRows_arg_t*)arg)->thread_id;
+    row* rowIn = ((processNextRows_arg_t*)arg)->rowIn;
+    row* rowOut = ((processNextRows_arg_t*)arg)->rowOut;
     rowPerthread = nrows / NUMTHREADS;
     startRow = threadId * rowPerthread;
 
@@ -106,8 +111,8 @@ void* processNextRows(void* arg){
         if (bitmap != 0) x = 1;
 
         //Enter main loop to scan along x cords
-        for(;;) {
-			for(;;) {
+        while (1) {
+			while (1) {
 				//insert column at x >= 1 into bitmap[6-8]
 				if(*prev == x) {
 					bitmap |= 0100;
@@ -175,25 +180,15 @@ void* processNextRows(void* arg){
     pthread_exit(NULL);
 }
 
-char*
-game_of_life (char* outboard, 
-	      char* inboard,
-	      const int nrows,
-	      const int ncols,
-	      const int gens_max)
-{
-    if (nrows > 10000) return inboard;
-    const int LDA = nrows;
-    row *rowIn = (row*) malloc(10000 * sizeof(*rowIn));
-    row *rowOut = (row*) malloc(10000 * sizeof(*rowOut));
-    row* temp;
-    int x_cords_idx;
+void* initStateList(void* arg){
     int liveCnt, bmpIdx;
-    pthread_t threads[4];
-    thread_arg_t thread_args[4];
+    int startState, StatePerthread;
+    int threadId = ((initStateList_arg_t*)arg)->thread_id;
+    StatePerthread = 512 / NUMTHREADS;
+    startState = threadId * StatePerthread;
 
     //init bitmap arr
-    for(int bitmap_state_idx = 0; bitmap_state_idx < 1<<9; bitmap_state_idx++) {
+    for(int bitmap_state_idx = startState; bitmap_state_idx < startState + StatePerthread; bitmap_state_idx++) {
 		for(liveCnt = bmpIdx = 0; bmpIdx < 9; bmpIdx++)
 			if(bitmap_state_idx & 1<<bmpIdx)
 				liveCnt += 1;
@@ -209,6 +204,34 @@ game_of_life (char* outboard,
 				stateList[bitmap_state_idx] = DEAD;
 		}
 	}
+    pthread_exit(NULL);
+}
+
+char*
+game_of_life (char* outboard, 
+	      char* inboard,
+	      const int nrows,
+	      const int ncols,
+	      const int gens_max)
+{
+    if (nrows > 10000) return inboard;
+    const int LDA = nrows;
+    row *rowIn = (row*) malloc(10000 * sizeof(*rowIn));
+    row *rowOut = (row*) malloc(10000 * sizeof(*rowOut));
+    row* temp;
+    int x_cords_idx;
+    pthread_t threads[4];
+    processNextRows_arg_t proc_row_thread_args[4];
+    initStateList_arg_t initState_args[4];
+
+    for (int threadId = 0; threadId < NUMTHREADS; threadId++){
+        initState_args[threadId].thread_id = threadId;
+        pthread_create(&threads[threadId], NULL, initStateList, &initState_args[threadId]);
+    }
+        // Wait for threads to complete
+    for (int i = 0; i < NUMTHREADS; i++) {
+      pthread_join(threads[i], NULL);
+    }
 
     //init live cords into rowIn
     for (int i = 0; i < nrows; i++){
@@ -230,13 +253,9 @@ game_of_life (char* outboard,
         rowIn[i].x_cords[x_cords_idx] = 50000;
         // printf("%d ", rowIn[i].x_cords[x_cords_idx]);
         rowIn[i].x_cords[x_cords_idx + 1] = 50000;
-        // printf("%d ", rowIn[i].x_cords[x_cords_idx + 1]);
         rowIn[i].x_cords[x_cords_idx + 2] = 50000;
-        // printf("%d ", rowIn[i].x_cords[x_cords_idx + 2]);
         rowIn[i].x_cords[x_cords_idx + 3] = 50000;
-        // printf("%d ", rowIn[i].x_cords[x_cords_idx + 3]);
         rowIn[i].x_cords[x_cords_idx + 4] = 50000;
-        // printf("%d ", rowIn[i].x_cords[x_cords_idx + 4]);
         if (x_cords_idx != 0)
             rowIn[i].x_tail = &rowIn[i].x_cords[x_cords_idx - 1];
         else
@@ -254,12 +273,12 @@ game_of_life (char* outboard,
     for (int it = 0; it < gens_max; it++){
         //for all rows
         for (int threadId = 0; threadId < NUMTHREADS; threadId++){
-            thread_args[threadId].thread_id = threadId;
-            thread_args[threadId].ncols = ncols;
-            thread_args[threadId].nrows = nrows;
-            thread_args[threadId].rowIn = rowIn;
-            thread_args[threadId].rowOut = rowOut;
-            pthread_create(&threads[threadId], NULL, processNextRows, &thread_args[threadId]);
+            proc_row_thread_args[threadId].thread_id = threadId;
+            proc_row_thread_args[threadId].ncols = ncols;
+            proc_row_thread_args[threadId].nrows = nrows;
+            proc_row_thread_args[threadId].rowIn = rowIn;
+            proc_row_thread_args[threadId].rowOut = rowOut;
+            pthread_create(&threads[threadId], NULL, processNextRows, &proc_row_thread_args[threadId]);
         }
         // Wait for threads to complete
         for (int i = 0; i < NUMTHREADS; i++) {
