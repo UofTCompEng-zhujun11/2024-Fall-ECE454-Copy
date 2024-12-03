@@ -42,7 +42,12 @@ typedef struct {
 // Thread argument
 typedef struct {
   int thread_id;
-} initStateList_arg_t;
+  row* rowIn;
+  row* rowOut;
+  char* inboard;
+  int ncols;
+  int nrows;
+} init_arg_t;
 
 void* processNextRows(void* arg){
     int bitmap;
@@ -180,12 +185,23 @@ void* processNextRows(void* arg){
     pthread_exit(NULL);
 }
 
-void* initStateList(void* arg){
+void* init(void* arg){
     int liveCnt, bmpIdx;
     int startState, StatePerthread;
-    int threadId = ((initStateList_arg_t*)arg)->thread_id;
+    int startRow, rowPerthread;
+    int threadId = ((init_arg_t*)arg)->thread_id;
+    int nrows = ((init_arg_t*)arg)->nrows;
+    int ncols = ((init_arg_t*)arg)->ncols;
+    row* rowIn = ((init_arg_t*)arg)->rowIn;
+    row* rowOut = ((init_arg_t*)arg)->rowOut;
+    char* inboard = ((init_arg_t*)arg)->inboard;
+    int x_cords_idx;
+    const int LDA = nrows;
+
     StatePerthread = 512 / NUMTHREADS;
     startState = threadId * StatePerthread;
+    rowPerthread = nrows / NUMTHREADS;
+    startRow = threadId * rowPerthread;
 
     //init bitmap arr
     for(int bitmap_state_idx = startState; bitmap_state_idx < startState + StatePerthread; bitmap_state_idx++) {
@@ -204,37 +220,8 @@ void* initStateList(void* arg){
 				stateList[bitmap_state_idx] = DEAD;
 		}
 	}
-    pthread_exit(NULL);
-}
-
-char*
-game_of_life (char* outboard, 
-	      char* inboard,
-	      const int nrows,
-	      const int ncols,
-	      const int gens_max)
-{
-    if (nrows > 10000) return inboard;
-    const int LDA = nrows;
-    row *rowIn = (row*) malloc(10000 * sizeof(*rowIn));
-    row *rowOut = (row*) malloc(10000 * sizeof(*rowOut));
-    row* temp;
-    int x_cords_idx;
-    pthread_t threads[4];
-    processNextRows_arg_t proc_row_thread_args[4];
-    initStateList_arg_t initState_args[4];
-
-    for (int threadId = 0; threadId < NUMTHREADS; threadId++){
-        initState_args[threadId].thread_id = threadId;
-        pthread_create(&threads[threadId], NULL, initStateList, &initState_args[threadId]);
-    }
-        // Wait for threads to complete
-    for (int i = 0; i < NUMTHREADS; i++) {
-      pthread_join(threads[i], NULL);
-    }
-
     //init live cords into rowIn
-    for (int i = 0; i < nrows; i++){
+    for (int i = startRow; i < startRow + rowPerthread; i++){
         x_cords_idx = 0;
         rowIn[i].prev = &rowIn[i - 1];
         rowIn[i].next = &rowIn[i + 1];
@@ -261,6 +248,39 @@ game_of_life (char* outboard,
         else
             rowIn[i].x_tail = &rowIn[i].x_cords[x_cords_idx];
         // printf("x_tail = %d \n", *rowIn[i].x_tail);
+    }
+    pthread_exit(NULL);
+}
+
+char*
+game_of_life (char* outboard, 
+	      char* inboard,
+	      const int nrows,
+	      const int ncols,
+	      const int gens_max)
+{
+    if (nrows > 10000) return inboard;
+    const int LDA = nrows;
+    row *rowIn = (row*) malloc(10000 * sizeof(*rowIn));
+    row *rowOut = (row*) malloc(10000 * sizeof(*rowOut));
+    row* temp;
+    pthread_t threads[4];
+    processNextRows_arg_t proc_row_thread_args[4];
+    init_arg_t init_args[4];
+
+    //Init
+    for (int threadId = 0; threadId < NUMTHREADS; threadId++){
+        init_args[threadId].thread_id = threadId;
+        init_args[threadId].ncols = ncols;
+        init_args[threadId].nrows = nrows;
+        init_args[threadId].rowIn = rowIn;
+        init_args[threadId].rowOut = rowOut;
+        init_args[threadId].inboard = inboard;
+        pthread_create(&threads[threadId], NULL, init, &init_args[threadId]);
+    }
+        // Wait for threads to complete
+    for (int i = 0; i < NUMTHREADS; i++) {
+      pthread_join(threads[i], NULL);
     }
     // printf("***********init done********\n");
     //Wrap rows properly
