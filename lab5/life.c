@@ -311,7 +311,7 @@ game_of_life (char* outboard,
     }
 
     //Construct output
-    memset(outboard, 0, sizeof(char) * ncols * nrows * 2);
+    memset(outboard, 0, sizeof(char) * ncols * nrows);
     for (int i = 0; i < nrows; i++){
         for (int j = 0; rowIn[i].x_cords[j] != 50000; j++){
             BOARD(outboard, i, rowIn[i].x_cords[j]) = 1;
