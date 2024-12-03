@@ -264,9 +264,9 @@ game_of_life (char* outboard,
     row *rowIn = (row*) malloc(10000 * sizeof(*rowIn));
     row *rowOut = (row*) malloc(10000 * sizeof(*rowOut));
     row* temp;
-    pthread_t threads[4];
-    processNextRows_arg_t proc_row_thread_args[4];
-    init_arg_t init_args[4];
+    pthread_t threads[NUMTHREADS];
+    processNextRows_arg_t proc_row_thread_args[NUMTHREADS];
+    init_arg_t init_args[NUMTHREADS];
 
     //Init
     for (int threadId = 0; threadId < NUMTHREADS; threadId++){

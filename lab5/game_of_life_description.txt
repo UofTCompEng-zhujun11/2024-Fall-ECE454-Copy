@@ -1,0 +1,5 @@
+This program uses a sparse data structure, storing rows as linked lists of live cell X-coordinates, terminated by a large number (50k). Precomputed state tables reduce runtime calculations. The implementation employs multithreading with POSIX threads (pthreads), dividing the universe into 4 row chunks processed by 4 threads. No locks are needed as threads operate on non-overlapping chunks.
+
+The core logic uses three pointers (prev, this, next) to scan rows. For each X-coordinate, the pointers construct a column of live cells into a bitmap by matching current X-coordinates, advancing when matches are found. The bitmap is indexed into a state table to determine if the previous cell (x-1) is alive, inserting it into the output list. This design uses a shift-register for the bitmap, hence why the data from each cell is used to update the previous cell. Cells at connecting edges are handled seperately as coner cases.
+
+I initially experimented with OpenMP on the sequential implementation, but it did not speed up much since the sequential implementation did a lot of repeated computation.
