@@ -276,6 +276,10 @@ game_of_life (char* outboard,
         init_args[threadId].rowIn = rowIn;
         init_args[threadId].rowOut = rowOut;
         init_args[threadId].inboard = inboard;
+        //pre init for the next thread arg
+        proc_row_thread_args[threadId].thread_id = threadId;
+        proc_row_thread_args[threadId].ncols = ncols;
+        proc_row_thread_args[threadId].nrows = nrows;
         pthread_create(&threads[threadId], NULL, init, &init_args[threadId]);
     }
         // Wait for threads to complete
@@ -293,9 +297,6 @@ game_of_life (char* outboard,
     for (int it = 0; it < gens_max; it++){
         //for all rows
         for (int threadId = 0; threadId < NUMTHREADS; threadId++){
-            proc_row_thread_args[threadId].thread_id = threadId;
-            proc_row_thread_args[threadId].ncols = ncols;
-            proc_row_thread_args[threadId].nrows = nrows;
             proc_row_thread_args[threadId].rowIn = rowIn;
             proc_row_thread_args[threadId].rowOut = rowOut;
             pthread_create(&threads[threadId], NULL, processNextRows, &proc_row_thread_args[threadId]);
