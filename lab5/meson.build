@@ -4,13 +4,14 @@ project(
   default_options : [
     'buildtype=plain',
     'debug=false',
-    'optimization=3',
+    'optimization=2',
     'cpp_std=gnu++23',
     'b_pie=true',
   ]
 )
 
 openmp = dependency('openmp', required : true)
+threads = dependency('threads')
 
 executable('gol_verify',
   'gol.c',
@@ -19,6 +20,8 @@ executable('gol_verify',
   'load.c',
   'save.c',
   c_args : '-DVERIFY_FLAG',
+  dependencies: [threads],      # Pthreads support.
+  install: true
 )
 
 executable('gol',
@@ -27,6 +30,8 @@ executable('gol',
   'lifeseq.c',
   'load.c',
   'save.c',
+  dependencies: [threads],      # Pthreads support.
+  install: true
 )
 
 executable('initboard',
